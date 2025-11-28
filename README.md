@@ -1,3 +1,3 @@
 Share over LAN, manual adding of peers
 
-pip install requirements.txt
+pip install -r requirements.txt
