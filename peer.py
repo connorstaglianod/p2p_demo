@@ -400,9 +400,10 @@ class PeerClient:
 
     def announce_to_tracker(self, event='started'):
         """Announce to tracker"""
+        # Properly URL-encode binary data
         params = {
-            'info_hash': self.torrent.info_hash,
-            'peer_id': PEER_ID,
+            'info_hash': urllib.parse.quote(self.torrent.info_hash, safe=''),
+            'peer_id': urllib.parse.quote(PEER_ID, safe=''),
             'port': self.listen_port,
             'uploaded': 0,
             'downloaded': 0,
@@ -410,7 +411,9 @@ class PeerClient:
             'event': event
         }
 
-        url = f"{self.torrent.announce}?{urllib.parse.urlencode(params, quote_via=urllib.parse.quote)}"
+        # Build URL manually since we've already encoded binary params
+        param_str = '&'.join(f"{k}={v}" for k, v in params.items())
+        url = f"{self.torrent.announce}?{param_str}"
 
         try:
             response = urllib.request.urlopen(url, timeout=10)

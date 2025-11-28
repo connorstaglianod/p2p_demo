@@ -131,21 +131,19 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
             params = parse_qs(parsed_url.query)
 
             # Extract required parameters
-            info_hash = params.get('info_hash', [None])[0]
-            peer_id = params.get('peer_id', [None])[0]
+            info_hash_encoded = params.get('info_hash', [None])[0]
+            peer_id_encoded = params.get('peer_id', [None])[0]
             port = params.get('port', [None])[0]
             event = params.get('event', [''])[0]
 
-            if not info_hash or not peer_id or not port:
+            if not info_hash_encoded or not peer_id_encoded or not port:
                 self.send_error(400, "Missing required parameters")
                 return
 
-            # Convert info_hash from URL encoding
-            if isinstance(info_hash, str):
-                info_hash = info_hash.encode('latin1')
-
-            if isinstance(peer_id, str):
-                peer_id = peer_id.encode('latin1')
+            # URL-decode the binary data
+            from urllib.parse import unquote_to_bytes
+            info_hash = unquote_to_bytes(info_hash_encoded)
+            peer_id = unquote_to_bytes(peer_id_encoded)
 
             port = int(port)
             ip = self.client_address[0]
