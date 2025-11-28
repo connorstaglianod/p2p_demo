@@ -276,10 +276,55 @@ class PieceManager:
         self.lock = threading.Lock()
         self.file_path = torrent.name
 
-        # Create file with correct size
+        # Check if file already exists and verify pieces
+        if os.path.exists(self.file_path):
+            file_size = os.path.getsize(self.file_path)
+            if file_size == torrent.length:
+                print(f"File exists, verifying pieces...")
+                self._verify_existing_file()
+            else:
+                print(f"File exists but wrong size, recreating...")
+                self._create_empty_file()
+        else:
+            print(f"File doesn't exist, creating empty file...")
+            self._create_empty_file()
+
+    def _create_empty_file(self):
+        """Create empty file with correct size"""
         with open(self.file_path, 'wb') as f:
-            f.seek(torrent.length - 1)
+            f.seek(self.torrent.length - 1)
             f.write(b'\0')
+
+    def _verify_existing_file(self):
+        """Verify existing file and mark complete pieces"""
+        verified_count = 0
+        with open(self.file_path, 'rb') as f:
+            for piece_index in range(self.torrent.num_pieces):
+                # Calculate piece length
+                piece_length = self.torrent.piece_length
+                if piece_index == self.torrent.num_pieces - 1:
+                    # Last piece may be shorter
+                    piece_length = self.torrent.length % self.torrent.piece_length
+                    if piece_length == 0:
+                        piece_length = self.torrent.piece_length
+
+                # Read piece from file
+                offset = piece_index * self.torrent.piece_length
+                f.seek(offset)
+                piece_data = f.read(piece_length)
+
+                # Verify hash
+                piece_hash = hashlib.sha1(piece_data).digest()
+                if piece_hash == self.torrent.piece_hashes[piece_index]:
+                    self.piece_status[piece_index] = True
+                    verified_count += 1
+
+        print(f"Verified {verified_count}/{self.torrent.num_pieces} pieces")
+        if verified_count == self.torrent.num_pieces:
+            print("This peer is a complete seeder!")
+        elif verified_count > 0:
+            print(
+                f"This peer can seed {verified_count} pieces and needs {self.torrent.num_pieces - verified_count} pieces")
 
     def have_piece(self, piece_index):
         """Check if we have a piece"""
@@ -400,6 +445,24 @@ class PeerClient:
 
     def announce_to_tracker(self, event='started'):
         """Announce to tracker"""
+        # Calculate bytes left to download
+        completed_pieces = sum(1 for status in self.piece_manager.piece_status if status)
+        bytes_left = (self.torrent.num_pieces - completed_pieces) * self.torrent.piece_length
+
+        # Adjust for last piece which may be shorter
+        if completed_pieces < self.torrent.num_pieces:
+            last_piece_length = self.torrent.length % self.torrent.piece_length
+            if last_piece_length == 0:
+                last_piece_length = self.torrent.piece_length
+            # Recalculate more accurately
+            bytes_left = self.torrent.length - (completed_pieces * self.torrent.piece_length)
+            if bytes_left < 0:
+                bytes_left = 0
+
+        # If starting as complete seeder, announce as completed
+        if event == 'started' and bytes_left == 0:
+            event = 'completed'
+
         # Properly URL-encode binary data
         params = {
             'info_hash': urllib.parse.quote(self.torrent.info_hash, safe=''),
@@ -407,7 +470,7 @@ class PeerClient:
             'port': self.listen_port,
             'uploaded': 0,
             'downloaded': 0,
-            'left': self.torrent.length,
+            'left': bytes_left,
             'event': event
         }
 
