@@ -100,38 +100,6 @@ All peers using the same torrent file will automatically discover each other thr
 
 
 ## Implementation Details
-### File Structure
-bittorrent-p2p/
-
-├── peer.py           # Peer client implementation
-
-├── tracker.py        # Tracker server implementation
-
-├── create_torrent.py # Utility to create .torrent files
-
-└── README.md         # This file
-
-### Peer Architecture
-PeerClient
-
-├── TorrentFile (metadata parser)
-
-├── PieceManager (download/upload management)
-
-│   ├── Piece verification
-
-│   ├── Block assembly
-
-│   └── File I/O
-
-└── PeerConnection (per-peer threads)
-
-    ├── Message handling
-
-    ├── Download worker
-
-    └── Upload responder
-
 ### Message Flow
 1. Startup:
    - Parse torrent file
