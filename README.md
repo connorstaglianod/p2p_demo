@@ -99,7 +99,26 @@ All peers using the same torrent file will automatically discover each other thr
 
 
 
-## Implementation Details
+## Core Components and Implementation Details
+### 1. peer.py - Peer Client (Main Component)
+- Purpose: Download from and upload to other peers
+- Key Classes:
+  - TorrentFile: Parses .torrent metadata (hashes, tracker URL, file info)
+  - PieceManager: Manages piece verification, block assembly, file I/O
+  - PeerConnection: Handles individual peer connections and BitTorrent protocol messages
+  - PeerClient: Orchestrates tracker communication, peer discovery, and transfers
+
+### 2. tracker.py - Tracker Server
+- Purpose: Coordinate peer discovery and maintain state
+- Key Classes:
+  - TrackerData: Thread-safe peer list management with timeout handling
+  - TrackerRequestHandler: HTTP endpoint for announce requests
+  - TrackerServer: HTTP server with integrated tracker data
+
+### 3. create_torrent.py - Torrent Creation Utility
+- Purpose: Generate .torrent files from source files
+- Function: Calculates SHA1 hashes for each 256KB piece
+
 ### Message Flow
 1. Startup:
    - Parse torrent file
