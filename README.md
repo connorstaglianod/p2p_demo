@@ -1,9 +1,10 @@
 # BitTorrent-Style P2P Client
+Python implementation of BitTorrent-style p2p file sharing over LAN, also includes a tracker server
+By Connor Stagliano
 
-Python implementation of BitTorrent-style p2p file sharing over LAN, also includes a tracker server.
+
 
 ## Features
-
 ### Peer Features
 - Tracker communication (announce, started, completed, stopped)
 - Peer handshake and connection management
@@ -32,22 +33,19 @@ pip install bencodepy
 
 
 
-## Instructions for use, examples, and troubleshooting
-
-### 1. Start the Tracker
-
+## Instructions for use and troubleshooting
+### 1. Start the Tracker on the Initial Seeder
 python tracker.py 8000
 
 The tracker will start on port 8000 and display:
 - Announce URL: http://localhost:8000/announce
 - Stats URL: http://localhost:8000/stats
 
-### 2. Create a Torrent File
-
+### 2. Create a Torrent File on the Initial Seeder
 Ensure the file intended for sharing is in p2p_demo directory (same level as py scripts). Then run following cmd in a new terminal:
 
 python create_torrent.py myfile.xxx http://192.168.1.100:8000/announce myfile.torrent
-(replace 192.168.1.100 with initial seeder's LAN IP)
+(replace 192.168.1.100 with initial seeder's IP)
 
 .torrent file will contain:
 - File metadata (name, size)
@@ -55,7 +53,6 @@ python create_torrent.py myfile.xxx http://192.168.1.100:8000/announce myfile.to
 - Piece hashes for verification
 
 ### 3. Start the Initial Seeder
-
 On the machine with the original file:
 
 python peer.py myfile.torrent
@@ -66,7 +63,6 @@ The peer will:
 - Seed the complete file
 
 ### 4. Start Additional Peers (Leechers)
-
 On other machines, copy the .torrent file into the p2p_demo directory. Then run following cmd:
 
 python peer.py myfile.torrent
@@ -82,69 +78,35 @@ Each peer will:
 
 
 
-## Usage Examples
+## Troubleshooting common issues
+### Error receiving from (peer_IP) - can't concat NoneType to bytes
+- Occurs because of connection issue, simply CTRL+C on leeching machine and run:
 
-### Example 1: Share a File on LAN
+python peer.py myfile.torrent 
 
-Machine 1 (Seeder):
-# Start tracker
-python tracker.py 8000
+- File should resume downloading where it left off
+- May need to do this multiple times to complete download
 
-# Create torrent (use actual IP for LAN access)
-python create_torrent.py document.pdf http://192.168.1.100:8000/announce document.torrent
-
-# Start seeding
-python peer.py document.torrent
-
-Machine 2 (Leecher):
-# Copy document.torrent to this machine
-python peer.py document.torrent
-
-Machine 3 (Leecher):
-# Copy document.torrent to this machine
-python peer.py document.torrent
-
-### Example 2: Monitor Tracker Statistics
-
-Visit http://localhost:8000/stats in a web browser to see:
-- Number of active torrents
-- Peers per torrent
-- Seeders vs. leechers
-
-### Example 3: Manual Peer Addition
+### If issue connecting to peers
+Ensure create_torrent.py was run with correct local IP of initial seeder machine (not localhost)
 
 Any peer wishing to connect to the network must be:
 - On the same LAN
 - Running peer.py with the same .torrent file in the p2p_demo directory
 
-All peers using the same torrent file will automatically discover each other through the tracker.
+All peers using the same torrent file will automatically discover each other through the tracker
 
 
 
-## Troubleshooting common issue(s)
-
-### Error receiving from (peer_IP) - can't concat NoneType to bytes
-- Occurs because of connection issue, simply CTRL+C on leeching machine and run:
-
-   python peer.py document.torrent 
-
-- File should resume downloading where it left off
-- May need to do this multiple times to complete download
-
-
-
+## Implementation Details
 ### File Structure
-
 bittorrent-p2p/
 ├── peer.py           # Peer client implementation
 ├── tracker.py        # Tracker server implementation
 ├── create_torrent.py # Utility to create .torrent files
 └── README.md         # This file
 
-
-
 ### Peer Architecture
-
 PeerClient
 ├── TorrentFile (metadata parser)
 ├── PieceManager (download/upload management)
@@ -157,7 +119,6 @@ PeerClient
     └── Upload responder
 
 ### Message Flow
-
 1. Startup:
    - Parse torrent file
    - Announce to tracker
@@ -182,15 +143,12 @@ PeerClient
    - Continue seeding
 
 ### Threading Model
-
 Each peer runs multiple threads:
 - Main thread: Coordination
 - Listen thread: Accept incoming connections
 - Per-peer receive threads: Handle incoming messages
 - Per-peer download threads: Request pieces
 - Cleanup threads: Keep-alive, timeouts
-
-## Protocol Details
 
 ### Handshake
 <pstrlen><pstr><reserved><info_hash><peer_id>
